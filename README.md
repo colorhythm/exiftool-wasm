@@ -17,7 +17,7 @@ This package provides a WebAssembly-based implementation of ExifTool that works 
 ### Basic Usage
 
 ```typescript
-import { parseMetadata } from '@uswriting/exiftool';
+import { parseMetadata } from '@colorhythm/exiftool';
 
 // Browser usage with File API
 document.querySelector('input[type="file"]').addEventListener('change', async (event) => {
