@@ -5,7 +5,7 @@
 ## Installation
 
 ```
-npm install @uswriting/exiftool
+npm install @colorhythm/exiftool
 ```
 
 ## Description
