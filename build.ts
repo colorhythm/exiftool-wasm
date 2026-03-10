@@ -2,7 +2,7 @@ const shared = {
   entrypoints: ['src/index.ts'],
   sourcemap: 'inline' as const,
   minify: true,
-  external: ['@6over3/zeroperl-ts']
+  external: ['@colorhythm/zeroperl-ts']
 };
 
 await Promise.all([
@@ -13,7 +13,7 @@ await Promise.all([
     target: 'browser',
     naming: '[name].js',
   }),
-  
+
   // CommonJS build for Node
   Bun.build({
     ...shared,
@@ -22,7 +22,7 @@ await Promise.all([
     target: 'node',
     naming: '[name].cjs',
   }),
-  
+
   // Browser-only demo build
   Bun.build({
     ...shared,
