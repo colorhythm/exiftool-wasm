@@ -1,11 +1,11 @@
-# @colorhythm/exiftool
+# @colorhythm/exiftool-wasm
 
 [ExifTool](https://exiftool.org) (13.52) powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using [zeroperl](https://github.com/colorhythm/zeroperl).
 
 ## Installation
 
 ```
-npm install @colorhythm/exiftool
+npm install @colorhythm/exiftool-wasm
 ```
 
 ## Description
@@ -17,7 +17,7 @@ This package provides a WebAssembly-based implementation of ExifTool that works 
 ### Basic Usage
 
 ```typescript
-import { parseMetadata } from '@colorhythm/exiftool';
+import { parseMetadata } from '@colorhythm/exiftool-wasm';
 
 // Browser usage with File API
 document.querySelector('input[type="file"]').addEventListener('change', async (event) => {
@@ -35,7 +35,7 @@ document.querySelector('input[type="file"]').addEventListener('change', async (e
 ### Writing Metadata
 
 ```typescript
-import { writeMetadata } from '@colorhythm/exiftool';
+import { writeMetadata } from '@colorhythm/exiftool-wasm';
 
 const result = await writeMetadata(file, {
   'Author': 'John Doe',
@@ -52,7 +52,7 @@ if (result.success) {
 ### Extracting Specific Metadata
 
 ```typescript
-import { parseMetadata } from '@colorhythm/exiftool';
+import { parseMetadata } from '@colorhythm/exiftool-wasm';
 
 const result = await parseMetadata(file, {
   args: ['-Author', '-CreateDate', '-Make', '-Model']
@@ -66,7 +66,7 @@ if (result.success) {
 ### JSON Output
 
 ```typescript
-import { parseMetadata } from '@colorhythm/exiftool';
+import { parseMetadata } from '@colorhythm/exiftool-wasm';
 
 const result = await parseMetadata(file, {
   args: ['-json', '-n'],
