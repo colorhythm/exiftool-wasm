@@ -1,87 +1,54 @@
 {
-  "name": "@colorhythm/exiftool-wasm",
-  "version": "1.0.9",
-  "description": "ExifTool powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using zeroperl",
-  "scripts": {
-    "build": "npm run build:esm && npm run build:cjs && bun build.ts",
-    "build:esm": "tsc --emitDeclarationOnly -p tsconfig.esm.json",
-    "build:cjs": "tsc --emitDeclarationOnly -p tsconfig.cjs.json",
-    "test": "vitest run"
-  },
-  "main": "./dist/cjs/index.cjs",
-  "module": "./dist/esm/index.js",
-  "typesVersions": {
-    "*": {
-      "cjs": [
-        "./dist/cjs/types/index.d.ts"
-      ],
-      "esm": [
-        "./dist/esm/types/index.d.ts"
-      ]
-    }
-  },
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/esm/types/index.d.ts",
-        "default": "./dist/esm/index.js"
-      },
-      "require": {
-        "types": "./dist/cjs/types/index.d.ts",
-        "default": "./dist/cjs/index.cjs"
-      }
+    "name": "@colorhythm/exiftool-wasm",
+    "version": "1.0.9",
+    "description": "ExifTool powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using zeroperl",
+    "scripts": {
+        "build": "npm run build:esm && bun build.ts",
+        "build:esm": "tsc --emitDeclarationOnly -p tsconfig.esm.json",
+        "test": "bun run build && node test/run.mjs"
     },
-    "./esm": {
-      "import": {
-        "types": "./dist/esm/types/index.d.ts",
-        "default": "./dist/esm/index.js"
-      }
+    "module": "./dist/esm/index.js",
+    "exports": {
+        ".": {
+            "types": "./dist/esm/types/index.d.ts",
+            "default": "./dist/esm/index.js"
+        }
     },
-    "./cjs": {
-      "require": {
-        "types": "./dist/cjs/types/index.d.ts",
-        "default": "./dist/cjs/index.cjs"
-      }
+    "keywords": [
+        "exiftool",
+        "metadata",
+        "exif",
+        "iptc",
+        "xmp",
+        "wasm",
+        "webassembly",
+        "browser",
+        "node",
+        "universal",
+        "files",
+        "images",
+        "documents",
+        "media",
+        "zeroperl"
+    ],
+    "author": "colorhythm",
+    "license": "Apache-2.0",
+    "type": "module",
+    "types": "./dist/esm/types/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "homepage": "https://github.com/colorhythm/exiftool-wasm#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/colorhythm/exiftool-wasm.git"
+    },
+    "bugs": {
+        "url": "https://github.com/colorhythm/exiftool-wasm/issues"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.3.2",
+        "typescript": "^5.7.3",
+        "vitest": "^4.0.15"
     }
-  },
-  "keywords": [
-    "exiftool",
-    "metadata",
-    "exif",
-    "iptc",
-    "xmp",
-    "wasm",
-    "webassembly",
-    "browser",
-    "node",
-    "universal",
-    "files",
-    "images",
-    "documents",
-    "media",
-    "zeroperl"
-  ],
-  "author": "colorhythm",
-  "license": "Apache-2.0",
-  "type": "module",
-  "types": "dist/esm/types/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "homepage": "https://github.com/colorhythm/exiftool-wasm#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/colorhythm/exiftool-wasm.git"
-  },
-  "bugs": {
-    "url": "https://github.com/colorhythm/exiftool-wasm/issues"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.3.2",
-    "typescript": "^5.7.3",
-    "vitest": "^4.0.15"
-  },
-  "dependencies": {
-      "@colorhythm/zeroperl-ts": "file:../zeroperl-ts"
-  }
 }

@@ -1,4 +1,4 @@
-import { MemoryFileSystem, ZeroPerl } from "@colorhythm/zeroperl-ts";
+import { MemoryFileSystem, ZeroPerl } from "./zeroperl";
 import exiftool from "./exiftool" with { type: "text" };
 import { StringBuilder } from "./sb";
 

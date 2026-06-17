@@ -1,26 +1,12 @@
-const shared = {
+await Bun.build({
     entrypoints: ['src/index.ts'],
-    sourcemap: 'inline' as const,
+    format: 'esm',
+    loader: { '.wasm': 'file' as const },
     minify: true,
-    external: ['@colorhythm/zeroperl-ts']
-};
-
-await Promise.all([
-    Bun.build({
-        ...shared,
-        outdir: 'dist/esm',
-        format: 'esm',
-        target: 'browser',
-        naming: '[name].js',
-    }),
-
-    Bun.build({
-        ...shared,
-        outdir: 'dist/cjs',
-        format: 'cjs',
-        target: 'node',
-        naming: '[name].cjs',
-    }),
-]);
+    naming: '[name].js',
+    outdir: 'dist/esm',
+    sourcemap: 'inline',
+    target: 'browser',
+});
 
 export {};
