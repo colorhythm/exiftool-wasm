@@ -1,38 +1,35 @@
 name: Publish to NPM
+
 on:
-  push:
-    tags:
-      - 'v*'
+    push:
+        tags:
+            - 'v*'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    id-token: write
+
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.x'
-          registry-url: 'https://registry.npmjs.org'
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24.x'
+                  registry-url: 'https://registry.npmjs.org'
 
-      - name: Update npm
-        run: npm install -g npm@latest
-      
-      - run: npm ci
+            - uses: oven-sh/setup-bun@v2
 
-      - name: Install dependencies
-        run: npm i
+            - name: Install
+              run: bun install
 
-      - name: Test package
-        run: npm test
+            - name: Build and test
+              run: bun run test
 
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Build package
-        run: bun run build
-
-      - name: Publish package to NPM
-        run: npm publish --access public --tag latest
+            - name: Publish
+              run: npm publish --access public --provenance
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
