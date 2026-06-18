@@ -1,7 +1,7 @@
 {
     "name": "@colorhythm/exiftool-wasm",
-    "version": "1.0.9",
-    "description": "ExifTool powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using zeroperl",
+    "version": "1.0.0",
+    "description": "Phil Harvey's ExifTool powered by WebAssembly to extract metadata from files in browsers and Node.js environments using zeroperl",
     "scripts": {
         "build": "npm run build:esm && bun build.ts",
         "build:esm": "tsc --emitDeclarationOnly -p tsconfig.esm.json",
