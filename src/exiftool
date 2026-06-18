@@ -3,7 +3,7 @@ use strict;
 use warnings;
 require 5.004;
 
-my $version = '13.59';
+my $version = '13.57';
 
 $^W = 1;
 
@@ -1094,7 +1094,7 @@ Command: for ( ; ; ) {
               and $mt->Options( Composite => 0 ), next;
             ( /^-e$/ or $a eq 'composite' )
               and $mt->Options( Composite => 1 ), next;
-            ( /^E$/ or $a eq 'escapehtml' or $a eq 'eh' )
+            ( /^E$/ or $a eq 'escapehtml' )
               and require Image::ExifTool::HTML
               and $escapeHTML = 1, next;
             ( $a eq 'ec' or $a eq 'escapec' )   and $escapeC   = 1, next;
@@ -2650,7 +2650,7 @@ sub GetImageInfo($$) {
                 $done{$tag} = 1;
                 $g = $et->GetGroup( $tag, $showGroup );
             }
-            unless ($g) {
+            else {
                 for ( ; ; ) {
                     $tag2 = shift @found2;
                     defined $tag2 or $g = '', last;
@@ -4869,7 +4869,6 @@ sub FilenameSPrintf($;$@) {
     $part{F} = $part{f} . $part{E};
     ( $part{D} = $part{d} ) =~ s{/+$}{};
     @part{qw(t g s o)} = @extra;
-    $part{o} =~ s(^.*[/\\])()s if $part{o};
     my ( $filename, $pos ) = ( '', 0 );
     while ( $fmt =~ /(%([-+]?)(\d*)([.:]?)(\d*)([lu]?)([dDfFeEtgso]))/g ) {
         $filename .= substr( $fmt, $pos, pos($fmt) - $pos - length($1) );
