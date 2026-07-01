@@ -79,6 +79,37 @@ if (result.success) {
 }
 ```
 
+### Extracting Embedded Binaries
+
+Pass `binary: true` to receive stdout as a raw `Uint8Array` — required for
+ExifTool's `-b` output (embedded thumbnails/previews, MPF images and HDR
+gain maps, depth maps, ICC profiles, trailer payloads), which is not UTF-8
+and would be corrupted by text decoding.
+
+```typescript
+import { parseMetadata } from '@colorhythm/exiftool-wasm';
+
+const result = await parseMetadata(file, {
+  // -m ignores minor warnings, -q suppresses info messages — recommended,
+  // since any stderr output is treated as failure.
+  args: ['-b', '-ThumbnailImage', '-m', '-q'],
+  binary: true,
+});
+
+if (result.success) {
+  const blob = new Blob([result.data], { type: 'image/jpeg' });
+  // result.data is a byte-exact Uint8Array
+}
+```
+
+Notes:
+
+- `transform` is not applied in binary mode.
+- Extracting multiple `-b` tags in one call concatenates their bytes on
+  stdout with no delimiter — extract one tag per call, or use
+  `args: ['-json', '-b', ...]` (without `binary`) to get each tag as a
+  `base64:`-prefixed string in JSON.
+
 ## Important Notes
 
 - In browser environments, pass the `File` object directly from file inputs. Do not convert it to an ArrayBuffer or Uint8Array.

@@ -230,6 +230,13 @@ export interface ZeroPerlOptions {
     stdout?: (data: string | Uint8Array) => void;
     stderr?: (data: string | Uint8Array) => void;
     fetch?: FetchLike;
+    /**
+     * When true, stdout/stderr handlers receive raw Uint8Array chunks
+     * instead of per-chunk UTF-8-decoded strings. Required for binary
+     * output (e.g. exiftool -b) — per-chunk text decoding corrupts
+     * non-UTF-8 bytes irreversibly (U+FFFD replacement characters).
+     */
+    outputBuffers?: boolean;
 }
 
 /** Result of a Perl evaluation or file execution. */
@@ -847,6 +854,7 @@ export class ZeroPerl {
                     withStdIo: {
                         stdout: (data) => options.stdout?.(data),
                         stderr: (data) => options.stderr?.(data),
+                        outputBuffers: options.outputBuffers,
                     },
                 }),
             ],

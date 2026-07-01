@@ -82,3 +82,66 @@ export class StringBuilder {
     return lineBreakCount > 0;
   }
 }
+
+/**
+ * A lightweight byte accumulator for raw stdout/stderr capture.
+ *
+ * Chunks are stored as-is and only joined (and, for text consumers,
+ * decoded) once at the end. Decoding the CONCATENATED buffer in one
+ * pass — rather than per-chunk — is what keeps multi-byte UTF-8
+ * sequences that straddle a chunk boundary intact, and what keeps
+ * binary payloads (exiftool -b) byte-exact.
+ */
+export class ByteBuilder {
+  private chunks: Uint8Array[] = [];
+  private decoder = new TextDecoder("utf-8");
+  private encoder = new TextEncoder();
+
+  /**
+   * Appends a chunk. Strings are encoded to UTF-8 bytes so mixed
+   * producers still accumulate into one coherent byte stream.
+   * @returns The ByteBuilder instance for chaining
+   */
+  append(chunk: Uint8Array | string): ByteBuilder {
+    this.chunks.push(
+      typeof chunk === "string" ? this.encoder.encode(chunk) : chunk,
+    );
+    return this;
+  }
+
+  /**
+   * Clears all accumulated bytes
+   * @returns The ByteBuilder instance for chaining
+   */
+  clear(): ByteBuilder {
+    this.chunks = [];
+    return this;
+  }
+
+  /**
+   * Total accumulated size in bytes
+   */
+  get byteLength(): number {
+    return this.chunks.reduce((acc, c) => acc + c.byteLength, 0);
+  }
+
+  /**
+   * Returns the accumulated bytes as a single Uint8Array
+   */
+  toBytes(): Uint8Array {
+    const out = new Uint8Array(this.byteLength);
+    let offset = 0;
+    for (const c of this.chunks) {
+      out.set(c, offset);
+      offset += c.byteLength;
+    }
+    return out;
+  }
+
+  /**
+   * Decodes the accumulated bytes as UTF-8 text (single-pass decode)
+   */
+  toString(): string {
+    return this.decoder.decode(this.toBytes());
+  }
+}

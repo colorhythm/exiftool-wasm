@@ -1,6 +1,6 @@
 import { MemoryFileSystem, ZeroPerl } from "./zeroperl";
 import exiftool from "./exiftool" with { type: "text" };
-import { StringBuilder } from "./sb";
+import { ByteBuilder } from "./sb";
 
 type FetchLike = (...args: unknown[]) => Promise<Response>;
 
@@ -49,6 +49,26 @@ export interface ExifToolOptions<TransformReturn = unknown> {
 	 * The ExifTool_config
 	 */
 	config?: Binaryfile | File;
+
+	/**
+	 * Return stdout as raw bytes (Uint8Array) instead of decoded text.
+	 *
+	 * Required for uncorrupted binary extraction — ExifTool's `-b` output
+	 * (embedded previews, MPF gain maps, depth maps, trailer payloads)
+	 * is not UTF-8 and must never pass through a text decode.
+	 * `transform` is not applied in binary mode.
+	 *
+	 * @example
+	 * // Extract an embedded thumbnail, byte-exact
+	 * const result = await parseMetadata(file, {
+	 *   args: ["-b", "-ThumbnailImage", "-m", "-q"],
+	 *   binary: true,
+	 * });
+	 * if (result.success) {
+	 *   const blob = new Blob([result.data], { type: "image/jpeg" });
+	 * }
+	 */
+	binary?: boolean;
 }
 
 /**
@@ -92,11 +112,16 @@ let cachedPerlRef: WeakRef<ZeroPerl> | null = null;
 let cachedFileSystemRef: WeakRef<MemoryFileSystem> | null = null;
 
 /**
- * Global output buffers
+ * Global output buffers.
+ *
+ * Raw bytes are accumulated per chunk and only decoded (for text
+ * consumers) or concatenated (for binary consumers) once, at the end
+ * of a run. Per-chunk decoding — the previous behavior — corrupted
+ * binary stdout (exiftool -b) irreversibly and could split multi-byte
+ * UTF-8 sequences across chunk boundaries.
  */
-const stdout = new StringBuilder();
-const stderr = new StringBuilder();
-const decoder = new TextDecoder();
+const stdout = new ByteBuilder();
+const stderr = new ByteBuilder();
 
 /**
  * Get or create the shared ZeroPerl instance
@@ -116,13 +141,13 @@ async function getZeroPerl(
 
 	cachedPerl = await ZeroPerl.create({
 		fileSystem: cachedFileSystem,
+		// Raw chunks — ByteBuilder handles the (single, final) decode.
+		outputBuffers: true,
 		stdout: (data) => {
-			const str = typeof data === "string" ? data : decoder.decode(data);
-			stdout.append(str);
+			stdout.append(data);
 		},
 		stderr: (data) => {
-			const str = typeof data === "string" ? data : decoder.decode(data);
-			stderr.append(str);
+			stderr.append(data);
 		},
 		fetch: fetchFn,
 	});
@@ -185,11 +210,31 @@ function transformTags(tags: ExifTags): string[] {
  * if (result.success) {
  *   console.log(result.data); // Typed access to specific metadata
  * }
+ *
+ * @example
+ * // Extract an embedded binary, byte-exact (see `binary` option)
+ * const result = await parseMetadata(file, {
+ *   args: ["-b", "-ThumbnailImage", "-m", "-q"],
+ *   binary: true,
+ * });
+ * if (result.success) {
+ *   console.log(result.data.byteLength); // Uint8Array
+ * }
  */
+export async function parseMetadata(
+	file: Binaryfile | File,
+	options: Omit<ExifToolOptions<never>, "transform" | "binary"> & {
+		binary: true;
+	},
+): Promise<ExifToolOutput<Uint8Array>>;
+export async function parseMetadata<TReturn = string>(
+	file: Binaryfile | File,
+	options?: ExifToolOptions<TReturn> & { binary?: false },
+): Promise<ExifToolOutput<TReturn>>;
 export async function parseMetadata<TReturn = string>(
 	file: Binaryfile | File,
 	options: ExifToolOptions<TReturn> = {},
-): Promise<ExifToolOutput<TReturn>> {
+): Promise<ExifToolOutput<TReturn | Uint8Array>> {
 	const { perl, fileSystem } = await getZeroPerl(options.fetch);
 	const tempFiles: string[] = [];
 
@@ -225,7 +270,6 @@ export async function parseMetadata<TReturn = string>(
 		perl.flush();
 
 		const stderrContent = stderr.toString();
-		const stdoutContent = stdout.toString();
 
 		if (!result.success || result.exitCode !== 0) {
 			const perlError = perl.getLastError();
@@ -246,6 +290,25 @@ export async function parseMetadata<TReturn = string>(
 				exitCode: 0,
 			};
 		}
+
+		// ── Binary mode: raw stdout bytes, no decode, no transform ──
+		if (options.binary) {
+			if (stdout.byteLength === 0) {
+				return {
+					success: false,
+					data: undefined,
+					error: "No output data from ExifTool",
+					exitCode: 0,
+				};
+			}
+			return {
+				success: true,
+				data: stdout.toBytes(),
+				exitCode: 0,
+			};
+		}
+
+		const stdoutContent = stdout.toString();
 
 		if (!stdoutContent || !stdoutContent.trim()) {
 			return {
