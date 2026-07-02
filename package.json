@@ -12,7 +12,8 @@
         ".": {
             "types": "./dist/esm/types/index.d.ts",
             "default": "./dist/esm/index.js"
-        }
+        },
+        "./dist/esm/*.wasm": "./dist/esm/*.wasm"
     },
     "keywords": [
         "exiftool",
