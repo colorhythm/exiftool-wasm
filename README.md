@@ -168,6 +168,23 @@ type ExifToolOutput<TOutput> =
     };
 ```
 
+## Acknowledgements
+
+This package stands on the shoulders of three projects, with our thanks:
+
+- **[ExifTool](https://exiftool.org)** by **Phil Harvey** — three decades
+  of metadata craft; everything here is a delivery mechanism for his work.
+- **[uswriting/exiftool](https://github.com/uswriting/exiftool)** by
+  **Andrew Sampson** — the original ExifTool-in-WebAssembly wrapper this
+  package is forked from.
+- **[zeroperl](https://github.com/6over3/zeroperl)** (6over3 / Andrew
+  Sampson) — the sandboxed Perl-to-WASI runtime that makes running
+  ExifTool in a browser possible at all.
+
+Our fork adds byte-safe binary extraction (`binary: true`), Worker-scope
+support, `-config`-first handling, and packaging fixes — see the commit
+history.
+
 ## License
 
 Apache License, Version 2.0
