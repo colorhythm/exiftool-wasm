@@ -251,8 +251,10 @@ export async function parseMetadata<TReturn = string>(
 		}
 		tempFiles.push(inputPath);
 
-		const args = [...(options.args || [])];
-
+		// ExifTool honors -config ONLY as the FIRST argument — appended
+		// anywhere else it is silently ignored and user-defined tags
+		// never load. Build it before the caller's args.
+		const args = [];
 		if (options.config) {
 			const configPath = `/${options.config.name}`;
 			if (options.config instanceof File) {
@@ -263,6 +265,7 @@ export async function parseMetadata<TReturn = string>(
 			tempFiles.push(configPath);
 			args.push(`-config`, configPath);
 		}
+		args.push(...(options.args || []));
 
 		args.push(inputPath);
 
@@ -429,8 +432,10 @@ export async function writeMetadata(
 		}
 		tempFiles.push(inputPath);
 
-		const args = [...(options.args || [])];
-
+		// ExifTool honors -config ONLY as the FIRST argument — appended
+		// anywhere else it is silently ignored and user-defined tags
+		// never load. Build it before the caller's args.
+		const args = [];
 		if (options.config) {
 			const configPath = `/${options.config.name}`;
 			if (options.config instanceof File) {
@@ -441,6 +446,7 @@ export async function writeMetadata(
 			tempFiles.push(configPath);
 			args.push(`-config`, configPath);
 		}
+		args.push(...(options.args || []));
 
 		args.push(...transformTags(tags));
 
