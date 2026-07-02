@@ -252,7 +252,14 @@ const textEncoder = new TextEncoder();
 let wasmSourceCache: WeakRef<ArrayBuffer> | null = null;
 
 function isBrowser(): boolean {
-    return typeof window !== "undefined" && typeof document !== "undefined";
+    // Window OR Worker scope — both load the wasm via fetch. Workers
+    // have neither window nor document, but DedicatedWorkerGlobalScope
+    // always carries importScripts (typeof "function" even in module
+    // workers, where calling it throws). Without this, workers fell
+    // into the Node branch and died trying to fs-read the wasm.
+    const g = globalThis as { importScripts?: unknown };
+    return (typeof window !== "undefined" && typeof document !== "undefined")
+        || (typeof g.importScripts === "function");
 }
 
 async function loadWasmSource(fetchFn?: FetchLike): Promise<ArrayBuffer> {
