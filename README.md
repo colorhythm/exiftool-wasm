@@ -15,6 +15,8 @@
     <path d="M659.5,906.6v67.1h18.7v43.8h-62.9v-134l20.9-20.7h42v43.8h-18.7ZM787.8,862.9l20.9,20.7v134h-62.7v-43.8h18.7v-67.1h-30.8v110.9h-43.8v-154.7h97.7Z"/>
   </g>
 </svg>
+
+
 # @colorhythm/exiftool-wasm
 
 [ExifTool](https://exiftool.org) powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using [zeroperl](https://github.com/colorhythm/zeroperl).
