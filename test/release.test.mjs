@@ -13,6 +13,7 @@ import {
     parseUpstreamVersion,
     planRelease,
     readTarball,
+    updateReadmeVersion,
     verifyIntegrity,
     verifyReceipt,
     verifyReceiptWithRetry,
@@ -101,6 +102,7 @@ async function rootFixture(t, { version = '1.0.4', manifest } = {}) {
     const root = await mkdtemp(resolve(tmpdir(), 'exiftool-release-test-'));
     t.after(() => rm(root, { force: true, recursive: true }));
     await writeFile(resolve(root, 'package.json'), json({ name: NAME, version }));
+    await writeFile(resolve(root, 'README.md'), `# ${NAME}\n\n<!-- exiftool-version:start -->\nBuilt with **ExifTool 13.60** · wrapper **${version}**.\n<!-- exiftool-version:end -->\n\nPackage documentation.\n`);
     if (manifest) await writeFile(resolve(root, 'exiftool-build.json'), json(manifest));
     return root;
 }
@@ -305,6 +307,45 @@ test('finalization records exact source pairs and all bundle hashes deterministi
     assert.deepEqual(first.distribution.map((item) => item.path), ['dist/esm/index.js', 'dist/esm/zeroperl.wasm']);
     await finalizeRelease(options);
     assert.deepEqual(await readFile(resolve(options.root, 'exiftool-build.json')), firstBytes);
+});
+
+test('finalization refreshes README for the next upstream and wrapper release without stale versions', async (t) => {
+    const options = await finalizable(t);
+    const original = await readFile(resolve(options.root, 'README.md'), 'utf8');
+    options.plan = { ...plan('1.0.6'), upstream: upstream('14.00') };
+    await writeFile(resolve(options.root, 'package.json'), json({ name: NAME, version: '1.0.6' }));
+    await writeFile(resolve(options.root, 'src/exiftool'), SCRIPT.toString().replace('13.60', '14.00'));
+    const manifest = await finalizeRelease(options);
+    const updated = await readFile(resolve(options.root, 'README.md'), 'utf8');
+    assert.equal(updated, original.replace('ExifTool 13.60', 'ExifTool 14.00').replace('wrapper **1.0.5**', 'wrapper **1.0.6**'));
+    assert.equal(manifest.upstream.version, '14.00');
+    assert.ok(updated.includes('Built with **ExifTool 14.00** · wrapper **1.0.6**.'));
+    assert.ok(!updated.includes('13.60'));
+    assert.ok(!updated.includes('1.0.5'));
+});
+
+test('README updates reject missing, duplicate, or misplaced markers', () => {
+    const start = '<!-- exiftool-version:start -->';
+    const end = '<!-- exiftool-version:end -->';
+    for (const readme of [
+        '# Package\n',
+        `# Package\n${start}\n${start}\n${end}\n`,
+        `# Package\n${start}\n${end}\n${end}\n`,
+        `# Package\n${end}\n${start}\n`,
+        `${start}\n${end}\n# Package\n`,
+        `# Package\nIntro before version.\n${start}\n${end}\n`,
+    ]) assert.throws(() => updateReadmeVersion(readme, '14.00', '1.0.6'), /README/);
+});
+
+test('invalid README markers fail finalization before README or manifest is changed', async (t) => {
+    const options = await finalizable(t);
+    await finalizeRelease(options);
+    const originalManifest = await readFile(resolve(options.root, 'exiftool-build.json'));
+    const invalidReadme = '# Package\n\nNo version markers.\n';
+    await writeFile(resolve(options.root, 'README.md'), invalidReadme);
+    await assert.rejects(finalizeRelease(options), /exactly one/);
+    assert.equal(await readFile(resolve(options.root, 'README.md'), 'utf8'), invalidReadme);
+    assert.deepEqual(await readFile(resolve(options.root, 'exiftool-build.json')), originalManifest);
 });
 
 test('finalization rejects mismatched script, stale WASM, and wrong planned package version', async (t) => {

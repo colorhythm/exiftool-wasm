@@ -160,7 +160,7 @@ jobs:
                 run: |
                     git config user.name 'github-actions[bot]'
                     git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-                    git add exiftool-build.json package.json package-lock.json src/exiftool src/zeroperl/zeroperl.wasm
+                    git add README.md exiftool-build.json package.json package-lock.json src/exiftool src/zeroperl/zeroperl.wasm
                     git commit -m "Prepare $PACKAGE_VERSION with ExifTool $EXIFTOOL_VERSION"
                     git bundle create artifacts/candidate.bundle HEAD ^"$GITHUB_SHA"
                     git rev-parse HEAD > artifacts/candidate-revision.txt
