@@ -132,7 +132,7 @@ Notes:
 ## Important Notes
 
 - In browser environments, pass the `File` object directly from file inputs. Do not convert it to an ArrayBuffer or Uint8Array.
-- This package uses asynchronous web APIs for file processing which allows handling files over 2GB without loading them entirely into memory.
+- This package uses asynchronous web APIs for file processing which allows handling files without loading the entire input into memory. Files over 2 GB are not covered by the automated release gate; runtime and format limitations still apply.
 - ExifTool is executed entirely within the browser or Node.js environment - no server requests are made for metadata extraction.
 
 ## API Reference
@@ -187,12 +187,69 @@ type ExifToolOutput<TOutput> =
     };
 ```
 
-## Acknowledgements
+## Build and verify
+
+The package vendors its zeroperl-ts adapter. Its binary-output and Worker fixes
+are intentional; an update must not replace that source wholesale with the
+standalone zeroperl-ts package.
+
+Use Node.js 24 and Bun 1.3.10:
+
+```bash
+npm ci
+bun run build
+npm test
+```
+
+`build` removes previous output before emitting declarations and the browser ESM
+bundle. The paired `src/exiftool` and `src/zeroperl/zeroperl.wasm` inputs come from
+a single build of [zeroperl](https://github.com/colorhythm/zeroperl). Immutable
+runtime and companion-test revisions are recorded in `release-config.json`.
+
+For full release validation, supply an extracted official ExifTool source tree
+whose archive checksum has been verified:
+
+```bash
+npx playwright install chrome webkit
+npm run test:release -- --expected-version 13.60 \
+    --source /absolute/path/to/Image-ExifTool-13.60 \
+    --output /absolute/path/to/release-evidence
+```
+
+This packs the actual npm artifact, tests it in Node and in browser Window and
+module Worker contexts, and compares metadata against native ExifTool. Required
+checks include custom `-config` tags, exact binary bytes, Unicode write/read,
+unchanged input bytes, default WASM asset loading, and MacRoman QuickTime tags.
+Browser automation covers Chrome and Playwright WebKit. Actual Safari,
+Firefox, and files over 2 GB are not release-gate coverage.
+
+## Version identity and automatic releases
+
+Starting with the automated releases, each npm tarball includes
+`exiftool-build.json`, exported as `@colorhythm/exiftool-wasm/build-info`. It
+records the exact ExifTool version, official source checksum and Git revision,
+Perl version, build repository revisions, workflow URL, and packaged-file hashes.
+The npm package version identifies our wrapper release separately from Phil's
+ExifTool version. CLI `-ver` is the runtime identity check; JSON metadata may
+represent `13.60` as the number `13.6`.
+
+The private [release controller](https://github.com/colorhythm/release-automation)
+dispatches a check hourly at minute 23 when activated. The public release
+workflow also supports manual dispatch.
+It publishes automatically only after all validation passes and the repository
+variable `EXIFTOOL_AUTO_PUBLISH` is `true`. The exact tested tarball is published,
+then downloaded from npm and checked before a release tag is created. A build
+pin or source commit alone is never treated as proof of publication.
+
+See [release operations](RELEASING.md) for activation, retries, provenance,
+and controller configuration.
+
+## Acknowledgments
 
 This package stands on the shoulders of three projects, with our thanks:
 
 - **[ExifTool](https://exiftool.org)** by **Phil Harvey** — three decades
-  of metadata craft; everything here is a delivery mechanism for his work.
+  of metadata craft; his engine supplies the metadata interpretation.
 - **[uswriting/exiftool](https://github.com/uswriting/exiftool)** by
   **Andrew Sampson** — the original ExifTool-in-WebAssembly wrapper this
   package is forked from.

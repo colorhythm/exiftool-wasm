@@ -1,35 +1,272 @@
-name: Publish to NPM
+name: Validate and publish ExifTool release
 
 on:
-    push:
-        tags:
-            - 'v*'
     workflow_dispatch:
+        inputs:
+            publish:
+                description: 'Publish automatically after every validation gate passes'
+                type: boolean
+                default: true
+            version:
+                description: 'Optional upstream version; must have an official checksum'
+                type: string
+                required: false
+
+concurrency:
+    group: exiftool-release
+    cancel-in-progress: false
 
 permissions:
     contents: read
-    id-token: write
 
 jobs:
-    publish:
-        runs-on: ubuntu-latest
+    plan:
+        runs-on: ubuntu-24.04
+        outputs:
+            package_version: ${{ steps.plan.outputs.package_version }}
+            sha256: ${{ steps.plan.outputs.sha256 }}
+            should_build: ${{ steps.plan.outputs.should_build }}
+            should_recover: ${{ steps.plan.outputs.should_recover }}
+            upstream_url: ${{ steps.plan.outputs.upstream_url }}
+            version: ${{ steps.plan.outputs.version }}
         steps:
-            - uses: actions/checkout@v4
+            -   uses: actions/checkout@v4
+                with:
+                    persist-credentials: false
+            -   uses: actions/setup-node@v4
+                with:
+                    node-version: '24.x'
+            -   name: Test release decisions and receipt verification
+                run: node --test test/release.test.mjs
+            -   name: Compare official release with the published npm artifact
+                id: plan
+                env:
+                    GITHUB_TOKEN: ${{ github.token }}
+                    REQUESTED_VERSION: ${{ inputs.version }}
+                run: |
+                    VERSION_ARGS=()
+                    if [ -n "$REQUESTED_VERSION" ]; then
+                        VERSION_ARGS=(--version "$REQUESTED_VERSION")
+                    fi
+                    node scripts/release.mjs plan "${VERSION_ARGS[@]}" \
+                        --output artifacts/release-plan.json --github-output "$GITHUB_OUTPUT"
+            -   uses: actions/upload-artifact@v4
+                with:
+                    if-no-files-found: error
+                    name: release-plan
+                    path: artifacts/release-plan.json
 
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: '24.x'
-                  registry-url: 'https://registry.npmjs.org'
+    validate:
+        needs: plan
+        if: needs.plan.outputs.should_build == 'true'
+        runs-on: ubuntu-24.04
+        timeout-minutes: 60
+        env:
+            EXIFTOOL_SHA256: ${{ needs.plan.outputs.sha256 }}
+            EXIFTOOL_URL: ${{ needs.plan.outputs.upstream_url }}
+            EXIFTOOL_VERSION: ${{ needs.plan.outputs.version }}
+            PACKAGE_VERSION: ${{ needs.plan.outputs.package_version }}
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+                    persist-credentials: false
+            -   uses: actions/setup-node@v4
+                with:
+                    node-version: '24.x'
+            -   uses: oven-sh/setup-bun@v2
+                with:
+                    bun-version: '1.3.10'
+            -   uses: actions/download-artifact@v4
+                with:
+                    name: release-plan
+                    path: artifacts
+            -   name: Read immutable build revisions
+                id: revisions
+                run: |
+                    node --input-type=module <<'JS' >> "$GITHUB_OUTPUT"
+                    import { readFileSync } from 'node:fs';
+                    const config = JSON.parse(readFileSync('release-config.json', 'utf8'));
+                    for (const key of ['zeroperl', 'zeroperlTs']) {
+                        if (!/^[0-9a-f]{40}$/.test(config[key])) throw new Error(`Invalid ${key} revision`);
+                        console.log(`${key}=${config[key]}`);
+                    }
+                    if (!/^\d+\.\d+\.\d+$/.test(config.perlVersion)) throw new Error('Invalid Perl version');
+                    console.log(`perlVersion=${config.perlVersion}`);
+                    JS
+            -   uses: actions/checkout@v4
+                with:
+                    path: artifacts/zeroperl-source
+                    persist-credentials: false
+                    ref: ${{ steps.revisions.outputs.zeroperl }}
+                    repository: colorhythm/zeroperl
+            -   uses: actions/checkout@v4
+                with:
+                    path: artifacts/zeroperl-ts-source
+                    persist-credentials: false
+                    ref: ${{ steps.revisions.outputs.zeroperlTs }}
+                    repository: colorhythm/zeroperl-ts
+            -   uses: docker/setup-buildx-action@v3
+            -   name: Build the paired CLI and WASM artifacts
+                uses: docker/build-push-action@v6
+                with:
+                    build-args: |
+                        EXIFTOOL_SHA256=${{ env.EXIFTOOL_SHA256 }}
+                        EXIFTOOL_VERSION=${{ env.EXIFTOOL_VERSION }}
+                        PERL_VERSION=${{ steps.revisions.outputs.perlVersion }}
+                    cache-from: type=gha,scope=exiftool-zeroperl
+                    cache-to: type=gha,mode=max,scope=exiftool-zeroperl
+                    context: artifacts/zeroperl-source
+                    load: true
+                    tags: exiftool-candidate:local
+            -   name: Extract required artifacts and official native fixtures
+                run: |
+                    mkdir -p artifacts/build artifacts/native
+                    docker run --rm -v "$PWD/artifacts/build:/output" exiftool-candidate:local cp -r /artifacts/. /output/
+                    test -s artifacts/build/exiftool.min.pl
+                    test -s artifacts/build/zeroperl.wasm
+                    cp artifacts/build/exiftool.min.pl src/exiftool
+                    cp artifacts/build/zeroperl.wasm src/zeroperl/zeroperl.wasm
+                    cp artifacts/build/zeroperl.wasm artifacts/zeroperl-ts-source/zeroperl.wasm
+                    curl --fail --location --retry 3 --connect-timeout 30 --max-time 300 "$EXIFTOOL_URL" --output artifacts/upstream.tar.gz
+                    printf '%s  %s\n' "$EXIFTOOL_SHA256" artifacts/upstream.tar.gz | sha256sum --check --strict
+                    tar -xzf artifacts/upstream.tar.gz --strip-components=1 -C artifacts/native
+                    test "$(perl artifacts/native/exiftool -ver)" = "$EXIFTOOL_VERSION"
+            -   name: Test the standalone zeroperl-ts companion
+                working-directory: artifacts/zeroperl-ts-source
+                run: bun test --timeout 30000
+            -   name: Build the package with locked dependencies
+                run: |
+                    npm ci
+                    npm version "$PACKAGE_VERSION" --no-git-tag-version --ignore-scripts --allow-same-version
+                    bun run build
+            -   name: Record source and output provenance
+                env:
+                    PERL_VERSION: ${{ steps.revisions.outputs.perlVersion }}
+                    ZEROPERL_REVISION: ${{ steps.revisions.outputs.zeroperl }}
+                    ZEROPERL_TS_REVISION: ${{ steps.revisions.outputs.zeroperlTs }}
+                run: |
+                    node scripts/release.mjs finalize --plan artifacts/release-plan.json \
+                        --zeroperl-revision "$ZEROPERL_REVISION" --zeroperl-ts-revision "$ZEROPERL_TS_REVISION" \
+                        --perl-version "$PERL_VERSION" --source-revision "$GITHUB_SHA" \
+                        --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            -   name: Install supported browser test engines
+                run: npx playwright install --with-deps chrome webkit
+            -   name: Validate the exact npm package in Node and browsers
+                run: |
+                    npm run test:release -- --expected-version "$EXIFTOOL_VERSION" \
+                        --source "$PWD/artifacts/native" --output "$PWD/artifacts/release-validation"
+            -   name: Prepare a source commit after every validation gate passes
+                run: |
+                    git config user.name 'github-actions[bot]'
+                    git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+                    git add exiftool-build.json package.json package-lock.json src/exiftool src/zeroperl/zeroperl.wasm
+                    git commit -m "Prepare $PACKAGE_VERSION with ExifTool $EXIFTOOL_VERSION"
+                    git bundle create artifacts/candidate.bundle HEAD ^"$GITHUB_SHA"
+                    git rev-parse HEAD > artifacts/candidate-revision.txt
+                    printf '%s\n' "$GITHUB_SHA" > artifacts/base-revision.txt
+            -   uses: actions/upload-artifact@v4
+                if: always()
+                with:
+                    if-no-files-found: error
+                    name: release-validation
+                    path: artifacts/release-validation
+            -   uses: actions/upload-artifact@v4
+                with:
+                    if-no-files-found: error
+                    name: validated-release
+                    path: |
+                        artifacts/base-revision.txt
+                        artifacts/candidate.bundle
+                        artifacts/candidate-revision.txt
+                        artifacts/release-plan.json
+                        artifacts/release-validation/*.tgz
 
-            - uses: oven-sh/setup-bun@v2
-
-            - name: Install
-              run: bun install
-
-            - name: Build and test
-              run: bun run test
-
-            - name: Publish
-              run: npm publish --access public --provenance
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    publish:
+        needs: [plan, validate]
+        if: >-
+            always() && needs.plan.result == 'success' &&
+            (needs.validate.result == 'success' || (needs.validate.result == 'skipped' && needs.plan.outputs.should_recover == 'true')) &&
+            github.ref == 'refs/heads/main' && vars.EXIFTOOL_AUTO_PUBLISH == 'true' &&
+            inputs.publish
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        permissions:
+            contents: write
+            id-token: write
+        steps:
+            -   uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+            -   uses: actions/setup-node@v4
+                with:
+                    node-version: '24.x'
+                    registry-url: 'https://registry.npmjs.org'
+            -   uses: actions/download-artifact@v4
+                with:
+                    name: release-plan
+                    path: artifacts
+            -   uses: actions/download-artifact@v4
+                if: needs.plan.outputs.should_build == 'true'
+                with:
+                    name: validated-release
+                    path: artifacts/candidate
+            -   name: Preserve the validated source revision before publication
+                if: needs.plan.outputs.should_build == 'true'
+                run: |
+                    BASE=$(cat artifacts/candidate/base-revision.txt)
+                    CANDIDATE=$(cat artifacts/candidate/candidate-revision.txt)
+                    [[ "$BASE" =~ ^[0-9a-f]{40}$ && "$CANDIDATE" =~ ^[0-9a-f]{40}$ ]]
+                    git fetch origin main
+                    test "$(git rev-parse origin/main)" = "$BASE"
+                    git bundle verify artifacts/candidate/candidate.bundle
+                    git fetch artifacts/candidate/candidate.bundle HEAD
+                    test "$(git rev-parse FETCH_HEAD)" = "$CANDIDATE"
+                    git merge --ff-only "$CANDIDATE"
+                    git push origin HEAD:refs/heads/main
+            -   name: Publish only the tarball that passed validation
+                if: needs.plan.outputs.should_build == 'true'
+                env:
+                    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                run: |
+                    mapfile -t PACKAGES < <(find artifacts/candidate -name '*.tgz' -type f)
+                    test "${#PACKAGES[@]}" = 1
+                    npm publish "${PACKAGES[0]}" --access public --provenance --ignore-scripts
+                    node scripts/release.mjs receipt --plan artifacts/release-plan.json \
+                        --tarball "${PACKAGES[0]}" --output artifacts/release-receipt.json
+            -   name: Verify an existing publication before recovering its tag
+                if: needs.plan.outputs.should_build != 'true'
+                run: |
+                    node scripts/release.mjs receipt --plan artifacts/release-plan.json --output artifacts/release-receipt.json
+            -   name: Tag only the confirmed published source
+                env:
+                    PACKAGE_VERSION: ${{ needs.plan.outputs.package_version }}
+                run: |
+                    TAG="v$PACKAGE_VERSION"
+                    RELEASE_COMMIT=$(git log -1 --format=%H -- exiftool-build.json)
+                    [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+                    git show "$RELEASE_COMMIT:exiftool-build.json" > artifacts/tag-manifest.json
+                    cmp exiftool-build.json artifacts/tag-manifest.json
+                    node --input-type=module - "$RELEASE_COMMIT" <<'JS'
+                    import { execFileSync } from 'node:child_process';
+                    import { createHash } from 'node:crypto';
+                    import { readFileSync } from 'node:fs';
+                    const manifest = JSON.parse(readFileSync('exiftool-build.json', 'utf8'));
+                    for (const artifact of Object.values(manifest.artifacts)) {
+                        const bytes = execFileSync('git', ['show', `${process.argv[2]}:${artifact.path}`], { maxBuffer: 128_000_000 });
+                        const hash = createHash('sha256').update(bytes).digest('hex');
+                        if (bytes.length !== artifact.bytes || hash !== artifact.sha256) throw new Error('Release source does not match published provenance');
+                    }
+                    JS
+                    test "$(git show "$RELEASE_COMMIT:package.json" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s).version))')" = "$PACKAGE_VERSION"
+                    if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+                        test "$(git rev-parse "$TAG^{commit}")" = "$RELEASE_COMMIT"
+                    else
+                        git tag "$TAG" "$RELEASE_COMMIT"
+                        git push origin "refs/tags/$TAG"
+                    fi
+            -   uses: actions/upload-artifact@v4
+                with:
+                    if-no-files-found: error
+                    name: release-receipt
+                    path: artifacts/release-receipt.json

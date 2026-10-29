@@ -1,10 +1,9 @@
 dist
 node_modules
+artifacts/
 .DS_Store
 *.esm.js
 *.map
 zeroperl-*.wasm
 public
-package-lock.json
 *.lock
-package-lock.json

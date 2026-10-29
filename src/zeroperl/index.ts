@@ -271,8 +271,9 @@ async function loadWasmSource(fetchFn?: FetchLike): Promise<ArrayBuffer> {
     let moduleData: ArrayBuffer;
 
     if (isBrowser()) {
-        const f = fetchFn ?? fetch;
-        const response = await f(zeroperl);
+        const response = fetchFn
+            ? await fetchFn(zeroperl)
+            : await fetch(new URL(zeroperl, import.meta.url));
         moduleData = await response.arrayBuffer();
     } else {
         const wasmUrl = new URL(zeroperl, import.meta.url);
