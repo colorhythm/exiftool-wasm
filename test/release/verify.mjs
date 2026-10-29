@@ -53,6 +53,11 @@ const buildInfo = JSON.parse(await readFile(join(packageDirectory, 'exiftool-bui
 if (buildInfo.upstream?.version !== expectedVersion || buildInfo.package?.name !== packageJson.name || buildInfo.package?.version !== packageJson.version) {
     throw new Error('The packed build-info identity differs from the expected release.');
 }
+const packagedReadme = await readFile(join(packageDirectory, 'README.md'), 'utf8');
+const versionLabel = `Built with **ExifTool ${expectedVersion}** · wrapper **${packageJson.version}**.`;
+if (!packagedReadme.split(/\r?\n/).includes(versionLabel)) {
+    throw new Error('The packed README must identify the exact ExifTool and wrapper versions.');
+}
 if (buildInfo.artifacts?.wasm?.sha256 !== hash(wasmBytes) || buildInfo.artifacts?.wasm?.bytes !== wasmBytes.length) {
     throw new Error('The packed WASM differs from its provenance record.');
 }

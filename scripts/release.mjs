@@ -16,6 +16,23 @@ export function parseUpstreamVersion(value) {
     return version;
 }
 
+export function updateReadmeVersion(readme, upstreamVersion, wrapperVersion) {
+    const startMarker = '<!-- exiftool-version:start -->';
+    const endMarker = '<!-- exiftool-version:end -->';
+    if (readme.split(startMarker).length !== 2 || readme.split(endMarker).length !== 2) {
+        throw new Error('README must contain exactly one ExifTool version marker pair.');
+    }
+    const start = readme.indexOf(startMarker);
+    const end = readme.indexOf(endMarker);
+    const heading = /^# [^\r\n]+/m.exec(readme);
+    if (end < start || !heading || start < heading.index + heading[0].length
+        || readme.slice(heading.index + heading[0].length, start).trim()) {
+        throw new Error('README version markers must be ordered immediately after the main heading.');
+    }
+    const line = `Built with **ExifTool ${parseUpstreamVersion(upstreamVersion)}** · wrapper **${packageVersion(wrapperVersion)}**.`;
+    return `${readme.slice(0, start)}${startMarker}\n${line}\n${endMarker}${readme.slice(end + endMarker.length)}`;
+}
+
 export function parseChecksum(text, version) {
     const filename = `Image-ExifTool-${parseUpstreamVersion(version)}.tar.gz`;
     const matches = [];
@@ -366,6 +383,9 @@ export async function finalizeRelease({ root = ROOT, plan, zeroperlRevision, zer
     validateManifest(manifest, plan.packageVersion);
     const files = new Map(await Promise.all(paths.map(async (path) => [`package/${path}`, await readFile(resolve(root, path))])));
     verifyManifestFiles(manifest, files);
+    const readmePath = resolve(root, 'README.md');
+    const readme = updateReadmeVersion(await readFile(readmePath, 'utf8'), plan.upstream.version, plan.packageVersion);
+    await writeFile(readmePath, readme);
     await writeFile(resolve(root, 'exiftool-build.json'), `${JSON.stringify(manifest, null, 4)}\n`);
     return manifest;
 }

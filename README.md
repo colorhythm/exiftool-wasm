@@ -19,6 +19,10 @@
 
 # @colorhythm/exiftool-wasm
 
+<!-- exiftool-version:start -->
+Built with **ExifTool 13.60** · wrapper **1.0.5**.
+<!-- exiftool-version:end -->
+
 [ExifTool](https://exiftool.org) powered by WebAssembly to extract and write metadata from files in browsers and Node.js environments using [zeroperl](https://github.com/colorhythm/zeroperl).
 
 ## Installation
