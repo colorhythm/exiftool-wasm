@@ -40,11 +40,24 @@ gh workflow run publish.yml --repo colorhythm/exiftool-wasm \
     --ref main -f publish=false
 ```
 
-The existing `NPM_TOKEN` secret is used for publication. Prefer npm trusted
-publishing bound to this repository and `publish.yml` when configured for this
-package; do not assume a stored token remains valid merely because it exists.
-A missing or expired credential fails publication without marking the release
-complete. Never log tokens or copy them into build artifacts.
+The publication job requests OIDC and supports
+[npm trusted publishing](https://docs.npmjs.com/trusted-publishers/). In the npm
+package's Settings → Trusted publishing, configure GitHub Actions with:
+
+| Field | Value |
+| --- | --- |
+| Organization or user | `colorhythm` |
+| Repository | `exiftool-wasm` |
+| Workflow filename | `publish.yml` |
+| Environment name | Leave empty; this workflow does not use a GitHub environment |
+| Allowed actions | Allow direct `npm publish` |
+
+This authorization belongs to the public package repository, not the private
+scheduler. Complete the first successful publish within npm's two-day activation
+window. npm tries OIDC before falling back to the optional `NPM_TOKEN` secret.
+Do not assume a stored token remains valid merely because it exists. A rejected
+credential fails publication without marking the release complete. Never log
+tokens or copy them into build artifacts.
 
 ## Retry and recovery
 
