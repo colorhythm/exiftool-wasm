@@ -416,3 +416,49 @@ test('receipt retry bounds prevent indefinite polling', async (t) => {
     }), /HTTP 503/);
     assert.equal(count, 2);
 });
+
+test('receipt allows ten minutes of propagation waits by default and accepts the explicit 61-attempt bound', async (t) => {
+    const item = publication();
+    const root = await rootFixture(t, { version: '1.0.5', manifest: item.manifest });
+    for (const attempts of [undefined, 61]) {
+        let count = 0;
+        const delays = [];
+        await assert.rejects(verifyReceiptWithRetry({
+            root,
+            plan: plan(),
+            fetch: async () => {
+                count += 1;
+                return new Response('still processing', { status: 404 });
+            },
+        }, {
+            attempts,
+            sleep: async (delay) => { delays.push(delay); },
+        }), /HTTP 404/);
+        assert.equal(count, 61);
+        assert.equal(delays.length, 60);
+        assert.ok(delays.every((delay) => delay === 10000));
+        assert.equal(delays.reduce((sum, delay) => sum + delay, 0), 600000);
+    }
+});
+
+test('receipt rejects retry settings beyond 61 attempts or ten-second intervals before polling', async () => {
+    let count = 0;
+    const options = { fetch: async () => { count += 1; } };
+    for (const settings of [{ attempts: 62 }, { attempts: 0 }, { delayMs: 10001 }]) {
+        await assert.rejects(verifyReceiptWithRetry(options, settings), /Invalid bounded receipt retry settings/);
+    }
+    assert.equal(count, 0);
+});
+
+test('receipt provenance mismatch fails immediately despite the extended processing window', async (t) => {
+    const item = publication();
+    const root = await rootFixture(t, { version: '1.0.5', manifest: item.manifest });
+    const different = publication({ mutate: (manifest) => { manifest.build.sourceRevision = 'f'.repeat(40); } });
+    const source = sources([different]);
+    let sleeps = 0;
+    await assert.rejects(verifyReceiptWithRetry({ root, plan: plan(), fetch: source.fetch, environment: {} }, {
+        sleep: async () => { sleeps += 1; },
+    }), /manifest differs/);
+    assert.equal(sleeps, 0);
+    assert.equal(source.requests.length, 2);
+});

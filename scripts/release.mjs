@@ -6,6 +6,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { gunzipSync } from 'node:zlib';
 
 const PACKAGE_NAME = '@colorhythm/exiftool-wasm';
+const RECEIPT_MAX_ATTEMPTS = 61;
 const REGISTRY = 'https://registry.npmjs.org';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const digest = (bytes, algorithm = 'sha256', encoding = 'hex') => createHash(algorithm).update(bytes).digest(encoding);
@@ -416,12 +417,12 @@ export async function verifyReceipt({ root = ROOT, plan, tarball, fetch = global
 }
 
 export async function verifyReceiptWithRetry(options, {
-    attempts = 6,
+    attempts = RECEIPT_MAX_ATTEMPTS,
     delayMs = 10000,
     onRetry = () => {},
     sleep = (duration) => new Promise((resolve_) => setTimeout(resolve_, duration)),
 } = {}) {
-    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 12 || !Number.isInteger(delayMs) || delayMs < 0 || delayMs > 10000) {
+    if (!Number.isInteger(attempts) || attempts < 1 || attempts > RECEIPT_MAX_ATTEMPTS || !Number.isInteger(delayMs) || delayMs < 0 || delayMs > 10000) {
         throw new Error('Invalid bounded receipt retry settings.');
     }
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -488,7 +489,7 @@ async function main() {
             });
         } else {
             result = await verifyReceiptWithRetry({ plan, tarball: options['--tarball'] }, {
-                attempts: Number(options['--attempts'] ?? 6),
+                attempts: Number(options['--attempts'] ?? RECEIPT_MAX_ATTEMPTS),
                 delayMs: Number(options['--delay-ms'] ?? 10000),
                 onRetry: (attempt, error) => console.error(`Receipt attempt ${attempt} is temporarily unavailable: ${error.message}`),
             });
