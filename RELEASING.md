@@ -68,6 +68,13 @@ accepted a tarball but receipt verification or tag creation failed, the next run
 checks the published tarball against the committed manifest before recovering
 the tag. A conflicting version or mismatched artifact fails closed.
 
+npm may accept a publication while its public registry still returns HTTP 404
+during processing. Receipt verification makes up to 61 attempts, ten seconds
+apart, allowing approximately ten minutes for propagation. Only transient
+availability errors retry; integrity and provenance mismatches fail immediately.
+If processing outlasts this window, verify the accepted publication again after
+it becomes available instead of republishing the immutable package version.
+
 An intervening main-branch change makes publication stop before its source push.
 Rerun from the new main revision. Do not force-push the candidate over unrelated
 work. Revert adapter changes through a normal reviewed commit and produce a new
