@@ -1,4 +1,4 @@
-await Bun.build({
+const result = await Bun.build({
     entrypoints: ['src/index.ts'],
     format: 'esm',
     loader: { '.wasm': 'file' as const },
@@ -8,5 +8,9 @@ await Bun.build({
     sourcemap: 'inline',
     target: 'browser',
 });
+
+if (!result.success) {
+    throw new AggregateError(result.logs, 'The ExifTool bundle failed to build.');
+}
 
 export {};
