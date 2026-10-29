@@ -1,6 +1,6 @@
 {
     "name": "@colorhythm/exiftool-wasm",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Phil Harvey's ExifTool powered by WebAssembly to extract metadata from files in browsers and Node.js environments using zeroperl",
     "packageManager": "bun@1.3.10",
     "scripts": {

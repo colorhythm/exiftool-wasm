@@ -1,0 +1,109 @@
+{
+    "schemaVersion": 1,
+    "package": {
+        "name": "@colorhythm/exiftool-wasm",
+        "version": "1.0.5"
+    },
+    "upstream": {
+        "version": "13.60",
+        "url": "https://sourceforge.net/projects/exiftool/files/Image-ExifTool-13.60.tar.gz",
+        "sha256": "c8e3c42576f46d862e4cd9c192989776e7363931e890c95056bcd6293e83ea36",
+        "revision": "980409314fddbd83d9092b5c160fafab7f67fd52"
+    },
+    "build": {
+        "perlVersion": "5.42.0",
+        "runUrl": "https://github.com/colorhythm/exiftool-wasm/actions/runs/40838122761",
+        "sourceRevision": "a01ef2e9adbd2f304afbf69ab99fd7ada94a5c39",
+        "zeroperlRevision": "3ade6d9a77ce56c5937b8b5a59cfa47cf2f2069c",
+        "zeroperlTsRevision": "cff13783e6e3f4b4f0d79860f47742c87ec6e30d"
+    },
+    "artifacts": {
+        "script": {
+            "path": "src/exiftool",
+            "bytes": 179858,
+            "sha256": "ba8accfcb3af7a2e7099c0463e25b10592c25b797c408f6b1241453f30d2d1cb"
+        },
+        "wasm": {
+            "path": "src/zeroperl/zeroperl.wasm",
+            "bytes": 27651111,
+            "sha256": "f854cbb7b6b014d2816a89428fcb217162bb0d7e65f2078f3bbd4b72eaa412ce"
+        }
+    },
+    "distribution": [
+        {
+            "path": "dist/esm/index.js",
+            "bytes": 452161,
+            "sha256": "54a04d9f11f732248571bdb58b457d4b0d4bb8b7921cbf2c657887b7507a37ef"
+        },
+        {
+            "path": "dist/esm/types/index.d.ts",
+            "bytes": 7390,
+            "sha256": "678bab488a717517d63d31d0d059b35f9151c2d28d30ebf4d390a35b68f84a66"
+        },
+        {
+            "path": "dist/esm/types/sb.d.ts",
+            "bytes": 2404,
+            "sha256": "ce48a60f10c2d7ee8f97acfafc1c366eb9734d09e6b12386914b39dee336804c"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/index.d.ts",
+            "bytes": 19228,
+            "sha256": "15da6fee86222f0e824516ba8dac46b542cca958b5dc3d2d9185b99aa5c3a18c"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/abi.d.ts",
+            "bytes": 3028,
+            "sha256": "09aa9c3b1b9078043134609b287ba9bd1321cb8fb865200145ffb4b95c6cffa5"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/asyncify.d.ts",
+            "bytes": 2048,
+            "sha256": "35f9e8b76b1337b3d2fa673567887782045e2adf3b9fba1b4789649fd6e24a04"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/args.d.ts",
+            "bytes": 281,
+            "sha256": "00c40c54b99576f96c5b78d676b13827189190d3505155aaf38f55ce36f7cef9"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/clock.d.ts",
+            "bytes": 311,
+            "sha256": "b4a4415920f99af707789f4b043a107352f01d87d3f81c27ec35ff2a6db3e1ff"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/environ.d.ts",
+            "bytes": 290,
+            "sha256": "807843db6aef813eb3d201fea4c201f69f3d17a09a10c34d31367c9f4b018331"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/fd.d.ts",
+            "bytes": 6013,
+            "sha256": "afbf8866439da31720c233494f6a5db13db9327c6a6db3e011cd4ef0661c7172"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/proc.d.ts",
+            "bytes": 308,
+            "sha256": "77e14082558cd6ed28d17d75680bfc4130e377783a9372ad3bdf47c01972b01c"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/features/random.d.ts",
+            "bytes": 315,
+            "sha256": "88e14e9ef444e53e03057fa05d730ec009710e0058fd16bad743736948045abb"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/index.d.ts",
+            "bytes": 2207,
+            "sha256": "b987920f071f71b9a6465e4331d8f27261fd94a2b5226dfe9ed7dd1649d49ccb"
+        },
+        {
+            "path": "dist/esm/types/zeroperl/wasi/options.d.ts",
+            "bytes": 1132,
+            "sha256": "6595e44411b5b94a48345d9ed9c33424462be6dc31201f018cfb416b02f13a54"
+        },
+        {
+            "path": "dist/esm/zeroperl-twnm61dk.wasm",
+            "bytes": 27651111,
+            "sha256": "f854cbb7b6b014d2816a89428fcb217162bb0d7e65f2078f3bbd4b72eaa412ce"
+        }
+    ]
+}
