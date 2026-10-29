@@ -12,8 +12,8 @@
     },
     "build": {
         "perlVersion": "5.42.0",
-        "runUrl": "https://github.com/colorhythm/exiftool-wasm/actions/runs/40838122761",
-        "sourceRevision": "a01ef2e9adbd2f304afbf69ab99fd7ada94a5c39",
+        "runUrl": "https://github.com/colorhythm/exiftool-wasm/actions/runs/40926231307",
+        "sourceRevision": "61d58aa0dfc8f5bccf424f35dbbe22d3123f643d",
         "zeroperlRevision": "3ade6d9a77ce56c5937b8b5a59cfa47cf2f2069c",
         "zeroperlTsRevision": "cff13783e6e3f4b4f0d79860f47742c87ec6e30d"
     },
