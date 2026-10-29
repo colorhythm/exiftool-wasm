@@ -50,6 +50,21 @@ const wasm = assets[0];
 const wasmBytes = await readFile(join(esm, wasm));
 const bundle = await readFile(join(esm, 'index.js'));
 const buildInfo = JSON.parse(await readFile(join(packageDirectory, 'exiftool-build.json'), 'utf8'));
+if (buildInfo.upstream?.version !== expectedVersion || buildInfo.package?.name !== packageJson.name || buildInfo.package?.version !== packageJson.version) {
+    throw new Error('The packed build-info identity differs from the expected release.');
+}
+if (buildInfo.artifacts?.wasm?.sha256 !== hash(wasmBytes) || buildInfo.artifacts?.wasm?.bytes !== wasmBytes.length) {
+    throw new Error('The packed WASM differs from its provenance record.');
+}
+if (!Array.isArray(buildInfo.distribution) || !buildInfo.distribution.some((entry) => entry.path === 'dist/esm/index.js')) {
+    throw new Error('The build-info distribution must identify the packaged bundle.');
+}
+for (const entry of buildInfo.distribution) {
+    const path = resolve(packageDirectory, entry.path);
+    if (!entry.path.startsWith('dist/esm/') || !path.startsWith(`${esm}${sep}`)) throw new Error('Invalid build-info distribution path.');
+    const bytes = await readFile(path);
+    if (entry.bytes !== bytes.length || entry.sha256 !== hash(bytes)) throw new Error(`The packed file differs from build-info: ${entry.path}`);
+}
 await stat(join(packageDirectory, packageJson.types));
 report.package = {
     buildInfo,

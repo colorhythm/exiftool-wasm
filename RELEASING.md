@@ -63,11 +63,13 @@ package version; do not overwrite published versions.
 ## Scheduling and remaining limits
 
 GitHub may delay scheduled jobs. Public-repository schedules also become
-disabled after 60 days without repository activity. An hourly public schedule
-therefore is not a durable unattended release monitor for infrequent upstream
-releases. A private controller or external scheduler should dispatch this
-workflow for long-term operation. Manual dispatch remains available. The
-pipeline does not create artificial keepalive commits.
+disabled after 60 days without repository activity. The schedule therefore lives in the private
+[`colorhythm/release-automation`](https://github.com/colorhythm/release-automation)
+repository, which dispatches this workflow hourly at minute 23. Its
+`RELEASE_DISPATCH_TOKEN` needs Actions write access to this repository, and its
+`EXIFTOOL_DISPATCH_ENABLED` variable must be `true`. The public workflow has no
+competing schedule. Manual dispatch remains available. The pipeline does not
+create artificial keepalive commits.
 
 The package gates cover selected fixtures, not every ExifTool format. They do
 not establish actual Safari compatibility or support for files over 2 GB. The

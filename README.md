@@ -233,14 +233,16 @@ The npm package version identifies our wrapper release separately from Phil's
 ExifTool version. CLI `-ver` is the runtime identity check; JSON metadata may
 represent `13.60` as the number `13.6`.
 
-The release workflow checks hourly at minute 23 and supports manual dispatch.
+The private [release controller](https://github.com/colorhythm/release-automation)
+dispatches a check hourly at minute 23 when activated. The public release
+workflow also supports manual dispatch.
 It publishes automatically only after all validation passes and the repository
 variable `EXIFTOOL_AUTO_PUBLISH` is `true`. The exact tested tarball is published,
 then downloaded from npm and checked before a release tag is created. A build
 pin or source commit alone is never treated as proof of publication.
 
 See [release operations](RELEASING.md) for activation, retries, provenance,
-and the public-repository scheduling limitation.
+and controller configuration.
 
 ## Acknowledgments
 

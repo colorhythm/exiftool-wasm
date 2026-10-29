@@ -1,8 +1,6 @@
 name: Validate and publish ExifTool release
 
 on:
-    schedule:
-        -   cron: '23 * * * *'
     workflow_dispatch:
         inputs:
             publish:
@@ -190,7 +188,7 @@ jobs:
             always() && needs.plan.result == 'success' &&
             (needs.validate.result == 'success' || (needs.validate.result == 'skipped' && needs.plan.outputs.should_recover == 'true')) &&
             github.ref == 'refs/heads/main' && vars.EXIFTOOL_AUTO_PUBLISH == 'true' &&
-            (github.event_name == 'schedule' || inputs.publish)
+            inputs.publish
         runs-on: ubuntu-24.04
         timeout-minutes: 15
         permissions:
