@@ -215,8 +215,9 @@ whose archive checksum has been verified:
 
 ```bash
 npx playwright install chrome webkit
-npm run test:release -- --expected-version 13.60 \
-    --source /absolute/path/to/Image-ExifTool-13.60 \
+EXIFTOOL_VERSION=$(node -p "require('./exiftool-build.json').upstream.version")
+npm run test:release -- --expected-version "$EXIFTOOL_VERSION" \
+    --source "/absolute/path/to/Image-ExifTool-$EXIFTOOL_VERSION" \
     --output /absolute/path/to/release-evidence
 ```
 
@@ -234,8 +235,8 @@ Starting with the automated releases, each npm tarball includes
 records the exact ExifTool version, official source checksum and Git revision,
 Perl version, build repository revisions, workflow URL, and packaged-file hashes.
 The npm package version identifies our wrapper release separately from Phil's
-ExifTool version. CLI `-ver` is the runtime identity check; JSON metadata may
-represent `13.60` as the number `13.6`.
+ExifTool version. CLI `-ver` returns the exact runtime version string; JSON
+metadata uses a number and may drop trailing zeros.
 
 The private [release controller](https://github.com/colorhythm/release-automation)
 dispatches a check hourly at minute 23 when activated. The public release
